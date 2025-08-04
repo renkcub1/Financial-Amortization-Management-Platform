@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useLoan } from '../context/LoanContext';
+import React, {useState, useEffect} from 'react';
+import {motion} from 'framer-motion';
+import {useLoan} from '../context/LoanContext';
 import Card from '../components/ui/Card';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import ReactECharts from 'echarts-for-react';
 
-const { FiPieChart, FiTrendingUp, FiDollarSign, FiCalendar, FiTarget, FiArrowDown } = FiIcons;
+const {FiPieChart, FiTrendingUp, FiDollarSign, FiCalendar, FiTarget, FiArrowDown} = FiIcons;
 
 const SavingsAnalysis = () => {
-  const { loans } = useLoan();
+  const {loans} = useLoan();
   const [analysisData, setAnalysisData] = useState(null);
   const [selectedScenario, setSelectedScenario] = useState('extra_payment');
 
@@ -41,13 +41,7 @@ const SavingsAnalysis = () => {
       const monthlyRate = loan.interestRate / 100 / 12;
       const totalPayments = loan.remainingTerm || 360;
       const totalInterest = (loan.monthlyPayment * totalPayments) - loan.balance;
-      
-      return {
-        ...loan,
-        totalInterest,
-        totalPayments,
-        totalPaid: loan.monthlyPayment * totalPayments
-      };
+      return {...loan, totalInterest, totalPayments, totalPaid: loan.monthlyPayment * totalPayments};
     });
 
     // Extra Payment Scenarios
@@ -57,7 +51,6 @@ const SavingsAnalysis = () => {
         const newTerm = Math.ceil(loan.balance / newPayment);
         const newTotalPaid = newPayment * newTerm;
         const newInterest = newTotalPaid - loan.balance;
-        
         return {
           ...loan,
           extraPayment: extraAmount / loans.length,
@@ -72,13 +65,8 @@ const SavingsAnalysis = () => {
 
       const totalInterestSaved = results.reduce((sum, loan) => sum + loan.interestSaved, 0);
       const totalTimeSaved = Math.max(...results.map(loan => loan.timeSaved));
-
-      return {
-        extraAmount,
-        loans: results,
-        totalInterestSaved,
-        totalTimeSaved
-      };
+      
+      return {extraAmount, loans: results, totalInterestSaved, totalTimeSaved};
     });
 
     // Refinance Scenarios
@@ -93,7 +81,7 @@ const SavingsAnalysis = () => {
           newPayment = loan.balance / remainingTerm;
         } else {
           newPayment = loan.balance * (newMonthlyRate * Math.pow(1 + newMonthlyRate, remainingTerm)) / 
-                     (Math.pow(1 + newMonthlyRate, remainingTerm) - 1);
+            (Math.pow(1 + newMonthlyRate, remainingTerm) - 1);
         }
         
         const newTotalPaid = newPayment * remainingTerm;
@@ -112,20 +100,11 @@ const SavingsAnalysis = () => {
 
       const totalInterestSaved = results.reduce((sum, loan) => sum + loan.interestSaved, 0);
       const totalMonthlySaved = results.reduce((sum, loan) => sum + loan.monthlySaved, 0);
-
-      return {
-        rateReduction,
-        loans: results,
-        totalInterestSaved,
-        totalMonthlySaved
-      };
+      
+      return {rateReduction, loans: results, totalInterestSaved, totalMonthlySaved};
     });
 
-    return {
-      baseline: baselineData,
-      extraPayment: extraPaymentScenarios,
-      refinance: refinanceScenarios
-    };
+    return {baseline: baselineData, extraPayment: extraPaymentScenarios, refinance: refinanceScenarios};
   };
 
   useEffect(() => {
@@ -142,18 +121,48 @@ const SavingsAnalysis = () => {
       trigger: 'axis',
       formatter: function(params) {
         const scenario = params[0].name;
-        return `${scenario}<br/>Interest Saved: $${params[0].value.toLocaleString()}`;
+        return `${scenario}<br/>Interest Saved: $${params[0].value.toLocaleString('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        })}`;
       }
     },
     xAxis: {
       type: 'category',
-      data: analysisData.extraPayment.map(scenario => `+$${scenario.extraAmount}`)
+      data: analysisData.extraPayment.map(scenario => `+$${scenario.extraAmount}`),
+      axisLabel: {
+        fontSize: 10,
+        margin: 12
+      }
     },
     yAxis: {
       type: 'value',
       name: 'Interest Saved ($)',
+      nameTextStyle: {
+        fontSize: 10,
+        padding: [0, 0, 0, 35] // Added more padding to make room for $ signs
+      },
       axisLabel: {
-        formatter: '${value:,.0f}'
+        formatter: function(value) {
+          if (value >= 1000000) {
+            return '$' + (value / 1000000).toFixed(1) + 'M';
+          } else if (value >= 1000) {
+            return '$' + (value / 1000).toFixed(0) + 'K';
+          }
+          return '$' + value.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+          });
+        },
+        fontSize: 9,
+        margin: 12
+      },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: '#f0f0f0',
+          width: 1
+        }
       }
     },
     series: [
@@ -164,48 +173,105 @@ const SavingsAnalysis = () => {
         itemStyle: {
           color: {
             type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
             colorStops: [
-              { offset: 0, color: '#22c55e' },
-              { offset: 1, color: '#16a34a' }
+              {offset: 0, color: '#22c55e'},
+              {offset: 1, color: '#16a34a'}
             ]
           }
-        }
+        },
+        barWidth: '40%'
       }
-    ]
+    ],
+    grid: {
+      left: '14%',
+      right: '5%',
+      bottom: '14%',
+      top: '10%',
+      containLabel: false
+    }
   };
 
   const refinanceComparisonOption = {
     tooltip: {
       trigger: 'axis',
       formatter: function(params) {
-        return `Rate Reduction: ${params[0].name}<br/>
-                Interest Saved: $${params[0].value.toLocaleString()}<br/>
-                Monthly Saved: $${params[1].value.toLocaleString()}`;
+        return `Rate Reduction: ${params[0].name}<br/> Interest Saved: $${params[0].value.toLocaleString('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        })}<br/> Monthly Saved: $${params[1].value.toLocaleString('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        })}`;
       }
     },
     legend: {
-      data: ['Interest Saved', 'Monthly Savings']
+      data: ['Interest Saved', 'Monthly Savings'],
+      textStyle: {
+        fontSize: 10
+      },
+      top: 0
     },
     xAxis: {
       type: 'category',
-      data: analysisData.refinance.map(scenario => `-${scenario.rateReduction}%`)
+      data: analysisData.refinance.map(scenario => `-${scenario.rateReduction}%`),
+      axisLabel: {
+        fontSize: 10,
+        margin: 12
+      }
     },
     yAxis: [
       {
         type: 'value',
         name: 'Interest Saved ($)',
         position: 'left',
+        nameTextStyle: {
+          fontSize: 10,
+          padding: [0, 0, 0, 35] // Added more padding to make room for $ signs
+        },
         axisLabel: {
-          formatter: '${value:,.0f}'
+          formatter: function(value) {
+            if (value >= 1000000) {
+              return '$' + (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+              return '$' + (value / 1000).toFixed(0) + 'K';
+            }
+            return '$' + value.toLocaleString('en-US', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0
+            });
+          },
+          fontSize: 9,
+          margin: 12
+        },
+        splitLine: {
+          show: true,
+          lineStyle: {
+            color: '#f0f0f0',
+            width: 1
+          }
         }
       },
       {
         type: 'value',
         name: 'Monthly Savings ($)',
         position: 'right',
+        nameTextStyle: {
+          fontSize: 10,
+          padding: [0, 35, 0, 0] // Added more padding to make room for $ signs
+        },
         axisLabel: {
-          formatter: '${value:,.0f}'
+          formatter: function(value) {
+            return '$' + value.toLocaleString('en-US', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0
+            });
+          },
+          fontSize: 9,
+          margin: 12
         }
       }
     ],
@@ -215,22 +281,44 @@ const SavingsAnalysis = () => {
         type: 'bar',
         yAxisIndex: 0,
         data: analysisData.refinance.map(scenario => scenario.totalInterestSaved),
-        itemStyle: { color: '#0ea5e9' }
+        itemStyle: {
+          color: '#0ea5e9'
+        },
+        barWidth: '40%'
       },
       {
         name: 'Monthly Savings',
         type: 'line',
         yAxisIndex: 1,
         data: analysisData.refinance.map(scenario => scenario.totalMonthlySaved),
-        itemStyle: { color: '#f59e0b' }
+        itemStyle: {
+          color: '#f59e0b'
+        },
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: {
+          width: 3
+        }
       }
-    ]
+    ],
+    grid: {
+      left: '14%',
+      right: '14%',
+      bottom: '14%',
+      top: '15%',
+      containLabel: false
+    }
   };
 
   const loanBreakdownOption = {
     tooltip: {
       trigger: 'item',
-      formatter: '{a} <br/>{b}: ${c:,.0f} ({d}%)'
+      formatter: function(params) {
+        return `${params.name}: $${params.value.toLocaleString('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        })} (${params.percent}%)`;
+      }
     },
     series: [
       {
@@ -263,19 +351,19 @@ const SavingsAnalysis = () => {
     color: ['#ef4444', '#f59e0b', '#0ea5e9', '#22c55e', '#8b5cf6']
   };
 
-  const bestExtraPaymentScenario = analysisData.extraPayment.reduce((best, current) => 
-    current.totalInterestSaved > best.totalInterestSaved ? current : best
+  const bestExtraPaymentScenario = analysisData.extraPayment.reduce(
+    (best, current) => current.totalInterestSaved > best.totalInterestSaved ? current : best
   );
 
-  const bestRefinanceScenario = analysisData.refinance.reduce((best, current) => 
-    current.totalInterestSaved > best.totalInterestSaved ? current : best
+  const bestRefinanceScenario = analysisData.refinance.reduce(
+    (best, current) => current.totalInterestSaved > best.totalInterestSaved ? current : best
   );
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      initial={{opacity: 0, y: 20}}
+      animate={{opacity: 1, y: 0}}
+      transition={{duration: 0.5}}
       className="space-y-6"
     >
       <div className="md:flex md:items-center md:justify-between">
@@ -379,9 +467,11 @@ const SavingsAnalysis = () => {
                   </div>
                 </div>
                 <div>
-                  <h4 className={`font-semibold ${
-                    selectedScenario === scenario.id ? 'text-primary-900' : 'text-gray-900'
-                  }`}>
+                  <h4
+                    className={`font-semibold ${
+                      selectedScenario === scenario.id ? 'text-primary-900' : 'text-gray-900'
+                    }`}
+                  >
                     {scenario.name}
                   </h4>
                   <p className="text-sm text-gray-600 mt-1">
@@ -401,21 +491,24 @@ const SavingsAnalysis = () => {
             Current Interest Distribution
           </h3>
           <div className="h-64">
-            <ReactECharts option={loanBreakdownOption} style={{ height: '100%', width: '100%' }} />
+            <ReactECharts option={loanBreakdownOption} style={{height: '100%', width: '100%'}} />
           </div>
         </Card>
 
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            {selectedScenario === 'extra_payment' ? 'Extra Payment Savings' : 
-             selectedScenario === 'refinance' ? 'Refinance Savings' : 'Consolidation Analysis'}
+            {selectedScenario === 'extra_payment'
+              ? 'Extra Payment Savings'
+              : selectedScenario === 'refinance'
+              ? 'Refinance Savings'
+              : 'Consolidation Analysis'}
           </h3>
           <div className="h-64">
             {selectedScenario === 'extra_payment' && (
-              <ReactECharts option={savingsComparisonOption} style={{ height: '100%', width: '100%' }} />
+              <ReactECharts option={savingsComparisonOption} style={{height: '100%', width: '100%'}} />
             )}
             {selectedScenario === 'refinance' && (
-              <ReactECharts option={refinanceComparisonOption} style={{ height: '100%', width: '100%' }} />
+              <ReactECharts option={refinanceComparisonOption} style={{height: '100%', width: '100%'}} />
             )}
           </div>
         </Card>
@@ -513,7 +606,7 @@ const SavingsAnalysis = () => {
               </div>
             </div>
           </div>
-
+          
           <div className="p-4 bg-primary-50 border border-primary-200 rounded-lg">
             <div className="flex items-start space-x-3">
               <SafeIcon icon={FiTrendingUp} className="h-6 w-6 text-primary-600 mt-0.5" />

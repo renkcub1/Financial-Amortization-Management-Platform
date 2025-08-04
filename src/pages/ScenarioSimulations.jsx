@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useLoan } from '../context/LoanContext';
+import React, {useState, useEffect} from 'react';
+import {motion} from 'framer-motion';
+import {useLoan} from '../context/LoanContext';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import ReactECharts from 'echarts-for-react';
 
-const { FiSettings, FiTrendingUp, FiTrendingDown, FiDollarSign, FiCalendar, FiRefreshCw, FiTarget } = FiIcons;
+const {FiSettings, FiTrendingUp, FiTrendingDown, FiDollarSign, FiCalendar, FiRefreshCw, FiTarget} = FiIcons;
 
 const ScenarioSimulations = () => {
-  const { loans } = useLoan();
+  const {loans} = useLoan();
   const [scenarios, setScenarios] = useState([]);
   const [activeScenario, setActiveScenario] = useState('current');
   const [simulationInputs, setSimulationInputs] = useState({
@@ -96,15 +96,15 @@ const ScenarioSimulations = () => {
 
       const monthlyRate = newRate / 100 / 12;
       const remainingTerm = loan.remainingTerm || 360;
-      
       let calculatedPayment;
+
       if (scenarioType === 'current') {
         calculatedPayment = loan.monthlyPayment;
       } else if (monthlyRate === 0) {
         calculatedPayment = loan.balance / remainingTerm;
       } else {
         calculatedPayment = loan.balance * (monthlyRate * Math.pow(1 + monthlyRate, remainingTerm)) / 
-                          (Math.pow(1 + monthlyRate, remainingTerm) - 1);
+          (Math.pow(1 + monthlyRate, remainingTerm) - 1);
       }
 
       const totalPayment = calculatedPayment + extraPayment;
@@ -147,7 +147,7 @@ const ScenarioSimulations = () => {
   useEffect(() => {
     if (loans.length > 0) {
       const scenarioResults = scenarioTypes.map(scenario => {
-        let inputs = { ...simulationInputs };
+        let inputs = {...simulationInputs};
         
         // Set default values for different scenarios
         switch (scenario.id) {
@@ -166,10 +166,10 @@ const ScenarioSimulations = () => {
           default:
             break;
         }
-        
+
         return calculateScenario(scenario.id, inputs);
       });
-      
+
       setScenarios(scenarioResults);
     }
   }, [loans, simulationInputs]);
@@ -181,21 +181,39 @@ const ScenarioSimulations = () => {
     tooltip: {
       trigger: 'axis',
       formatter: function(params) {
-        return `${params[0].name}<br/>
-                Total Interest: $${params[0].value.toLocaleString()}<br/>
-                Monthly Payment: $${params[1].value.toLocaleString()}<br/>
-                Payoff Time: ${params[2].value} months`;
+        return `${params[0].name}<br/> Total Interest: $${params[0].value.toLocaleString('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        })}<br/> Monthly Payment: $${params[1].value.toLocaleString('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        })}<br/> Payoff Time: ${params[2].value} months`;
       }
     },
     legend: {
-      data: ['Total Interest', 'Monthly Payment', 'Payoff Time']
+      data: ['Total Interest', 'Monthly Payment', 'Payoff Time'],
+      top: 5,
+      textStyle: {
+        fontSize: 11
+      }
     },
     xAxis: {
       type: 'category',
-      data: scenarios.map(s => scenarioTypes.find(st => st.id === s.type)?.name || s.type),
+      data: scenarios.map(s => {
+        const scenarioName = scenarioTypes.find(st => st.id === s.type)?.name || s.type;
+        // Truncate long names for better display
+        return scenarioName.length > 10 ? scenarioName.substring(0, 10) + '...' : scenarioName;
+      }),
       axisLabel: {
-        rotate: 45,
-        interval: 0
+        rotate: 30,
+        interval: 0,
+        fontSize: 9,
+        margin: 8,
+        overflow: 'truncate',
+        width: 60
+      },
+      axisTick: {
+        alignWithLabel: true
       }
     },
     yAxis: [
@@ -203,16 +221,47 @@ const ScenarioSimulations = () => {
         type: 'value',
         name: 'Amount ($)',
         position: 'left',
+        nameTextStyle: {
+          fontSize: 10,
+          padding: [0, 0, 0, 10]
+        },
         axisLabel: {
-          formatter: '${value:,.0f}'
+          formatter: function(value) {
+            if (value >= 1000000) {
+              return '$' + (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+              return '$' + (value / 1000).toFixed(0) + 'K';
+            }
+            return '$' + value.toLocaleString('en-US', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0
+            });
+          },
+          fontSize: 9,
+          margin: 5
+        },
+        splitLine: {
+          show: true,
+          lineStyle: {
+            color: '#f0f0f0',
+            width: 1
+          }
         }
       },
       {
         type: 'value',
         name: 'Months',
         position: 'right',
+        nameTextStyle: {
+          fontSize: 10,
+          padding: [0, 10, 0, 0]
+        },
         axisLabel: {
-          formatter: '{value} mo'
+          formatter: function(value) {
+            return value + 'mo';
+          },
+          fontSize: 9,
+          margin: 5
         }
       }
     ],
@@ -222,64 +271,139 @@ const ScenarioSimulations = () => {
         type: 'bar',
         yAxisIndex: 0,
         data: scenarios.map(s => s.summary.totalInterest),
-        itemStyle: { color: '#ef4444' }
+        itemStyle: {
+          color: '#ef4444'
+        },
+        barWidth: '20%',
+        barGap: '15%'
       },
       {
         name: 'Monthly Payment',
         type: 'bar',
         yAxisIndex: 0,
         data: scenarios.map(s => s.summary.totalMonthlyPayment),
-        itemStyle: { color: '#0ea5e9' }
+        itemStyle: {
+          color: '#0ea5e9'
+        },
+        barWidth: '20%'
       },
       {
         name: 'Payoff Time',
         type: 'line',
         yAxisIndex: 1,
         data: scenarios.map(s => s.summary.maxPayoffTime),
-        itemStyle: { color: '#22c55e' }
+        itemStyle: {
+          color: '#22c55e'
+        },
+        lineStyle: {
+          width: 2
+        },
+        symbol: 'circle',
+        symbolSize: 4
       }
     ],
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '20%',
-      containLabel: true
+      left: '12%',
+      right: '12%',
+      bottom: '30%',
+      top: '20%',
+      containLabel: false
     }
   };
 
   const timelineChartOption = currentScenario ? {
     tooltip: {
       trigger: 'axis',
-      formatter: 'Month {b}: ${c:,.0f}'
+      formatter: function(params) {
+        return `Month ${params[0].axisValue}: $${params[0].value.toLocaleString('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        })}`;
+      }
+    },
+    legend: {
+      data: currentScenario.loans.map(loan => loan.name.length > 15 ? loan.name.substring(0, 15) + '...' : loan.name),
+      top: 5,
+      textStyle: {
+        fontSize: 10
+      }
     },
     xAxis: {
       type: 'category',
-      data: Array.from({ length: 60 }, (_, i) => i + 1), // First 5 years
-      name: 'Month'
+      data: Array.from({length: 60}, (_, i) => i + 1), // First 5 years
+      name: 'Month',
+      nameLocation: 'middle',
+      nameGap: 30,
+      nameTextStyle: {
+        fontSize: 10
+      },
+      axisLabel: {
+        fontSize: 9,
+        interval: 'auto',
+        margin: 8
+      }
     },
     yAxis: {
       type: 'value',
-      name: 'Remaining Balance ($)',
+      name: 'Balance ($)',
+      nameTextStyle: {
+        fontSize: 10,
+        padding: [0, 0, 0, 30]
+      },
       axisLabel: {
-        formatter: '${value:,.0f}'
+        formatter: function(value) {
+          if (value >= 1000000) {
+            return '$' + (value / 1000000).toFixed(1) + 'M';
+          } else if (value >= 1000) {
+            return '$' + (value / 1000).toFixed(0) + 'K';
+          }
+          return '$' + value.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+          });
+        },
+        fontSize: 9,
+        margin: 10
+      },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: '#f0f0f0'
+        }
       }
     },
     series: currentScenario.loans.map((loan, index) => ({
-      name: loan.name,
+      name: loan.name.length > 15 ? loan.name.substring(0, 15) + '...' : loan.name,
       type: 'line',
-      data: Array.from({ length: Math.min(60, loan.monthsToPayoff) }, (_, month) => {
-        const remaining = Math.max(0, loan.balance - (loan.totalPayment * (month + 1)));
-        return remaining;
-      }),
-      itemStyle: { color: ['#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5] }
-    }))
+      data: Array.from(
+        {length: Math.min(60, loan.monthsToPayoff)},
+        (_, month) => {
+          const remaining = Math.max(0, loan.balance - (loan.totalPayment * (month + 1)));
+          return remaining;
+        }
+      ),
+      itemStyle: {
+        color: ['#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]
+      },
+      lineStyle: {
+        width: 2
+      },
+      symbol: 'none'
+    })),
+    grid: {
+      left: '14%',
+      right: '8%',
+      bottom: '18%',
+      top: '22%',
+      containLabel: false
+    }
   } : {};
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      initial={{opacity: 0, y: 20}}
+      animate={{opacity: 1, y: 0}}
+      transition={{duration: 0.5}}
       className="space-y-6"
     >
       <div className="md:flex md:items-center md:justify-between">
@@ -312,9 +436,11 @@ const ScenarioSimulations = () => {
                   <SafeIcon icon={scenario.icon} className={`h-6 w-6 ${scenario.color}`} />
                 </div>
                 <div>
-                  <h4 className={`font-semibold ${
-                    activeScenario === scenario.id ? 'text-primary-900' : 'text-gray-900'
-                  }`}>
+                  <h4
+                    className={`font-semibold ${
+                      activeScenario === scenario.id ? 'text-primary-900' : 'text-gray-900'
+                    }`}
+                  >
                     {scenario.name}
                   </h4>
                   <p className="text-sm text-gray-600 mt-1">
@@ -339,14 +465,12 @@ const ScenarioSimulations = () => {
               type="number"
               step="0.1"
               value={simulationInputs.interestRateChange}
-              onChange={(e) => setSimulationInputs({
-                ...simulationInputs,
-                interestRateChange: parseFloat(e.target.value) || 0
-              })}
+              onChange={(e) =>
+                setSimulationInputs({...simulationInputs, interestRateChange: parseFloat(e.target.value) || 0})
+              }
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Extra Monthly Payment ($)
@@ -354,14 +478,12 @@ const ScenarioSimulations = () => {
             <input
               type="number"
               value={simulationInputs.extraPayment}
-              onChange={(e) => setSimulationInputs({
-                ...simulationInputs,
-                extraPayment: parseFloat(e.target.value) || 0
-              })}
+              onChange={(e) =>
+                setSimulationInputs({...simulationInputs, extraPayment: parseFloat(e.target.value) || 0})
+              }
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Refinance Rate (%)
@@ -370,10 +492,9 @@ const ScenarioSimulations = () => {
               type="number"
               step="0.1"
               value={simulationInputs.refinanceRate}
-              onChange={(e) => setSimulationInputs({
-                ...simulationInputs,
-                refinanceRate: parseFloat(e.target.value) || 0
-              })}
+              onChange={(e) =>
+                setSimulationInputs({...simulationInputs, refinanceRate: parseFloat(e.target.value) || 0})
+              }
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
             />
           </div>
@@ -396,12 +517,17 @@ const ScenarioSimulations = () => {
                   ${currentScenario.summary.totalInterest.toLocaleString()}
                 </p>
                 {currentScenario.type !== 'current' && (
-                  <p className={`text-sm ${
-                    currentScenario.summary.totalInterest < baselineScenario.summary.totalInterest
-                      ? 'text-success-600' : 'text-danger-600'
-                  }`}>
-                    {currentScenario.summary.totalInterest < baselineScenario.summary.totalInterest ? '↓' : '↑'}
-                    ${Math.abs(currentScenario.summary.totalInterest - baselineScenario.summary.totalInterest).toLocaleString()}
+                  <p
+                    className={`text-sm ${
+                      currentScenario.summary.totalInterest < baselineScenario.summary.totalInterest
+                        ? 'text-success-600'
+                        : 'text-danger-600'
+                    }`}
+                  >
+                    {currentScenario.summary.totalInterest < baselineScenario.summary.totalInterest ? '↓' : '↑'} $
+                    {Math.abs(
+                      currentScenario.summary.totalInterest - baselineScenario.summary.totalInterest
+                    ).toLocaleString()}
                   </p>
                 )}
               </div>
@@ -421,12 +547,20 @@ const ScenarioSimulations = () => {
                   ${currentScenario.summary.totalMonthlyPayment.toLocaleString()}
                 </p>
                 {currentScenario.type !== 'current' && (
-                  <p className={`text-sm ${
-                    currentScenario.summary.totalMonthlyPayment < baselineScenario.summary.totalMonthlyPayment
-                      ? 'text-success-600' : 'text-danger-600'
-                  }`}>
-                    {currentScenario.summary.totalMonthlyPayment < baselineScenario.summary.totalMonthlyPayment ? '↓' : '↑'}
-                    ${Math.abs(currentScenario.summary.totalMonthlyPayment - baselineScenario.summary.totalMonthlyPayment).toLocaleString()}
+                  <p
+                    className={`text-sm ${
+                      currentScenario.summary.totalMonthlyPayment < baselineScenario.summary.totalMonthlyPayment
+                        ? 'text-success-600'
+                        : 'text-danger-600'
+                    }`}
+                  >
+                    {currentScenario.summary.totalMonthlyPayment < baselineScenario.summary.totalMonthlyPayment
+                      ? '↓'
+                      : '↑'}{' '}
+                    $
+                    {Math.abs(
+                      currentScenario.summary.totalMonthlyPayment - baselineScenario.summary.totalMonthlyPayment
+                    ).toLocaleString()}
                   </p>
                 )}
               </div>
@@ -446,11 +580,14 @@ const ScenarioSimulations = () => {
                   {currentScenario.summary.maxPayoffTime} mo
                 </p>
                 {currentScenario.type !== 'current' && (
-                  <p className={`text-sm ${
-                    currentScenario.summary.maxPayoffTime < baselineScenario.summary.maxPayoffTime
-                      ? 'text-success-600' : 'text-danger-600'
-                  }`}>
-                    {currentScenario.summary.maxPayoffTime < baselineScenario.summary.maxPayoffTime ? '↓' : '↑'}
+                  <p
+                    className={`text-sm ${
+                      currentScenario.summary.maxPayoffTime < baselineScenario.summary.maxPayoffTime
+                        ? 'text-success-600'
+                        : 'text-danger-600'
+                    }`}
+                  >
+                    {currentScenario.summary.maxPayoffTime < baselineScenario.summary.maxPayoffTime ? '↓' : '↑'}{' '}
                     {Math.abs(currentScenario.summary.maxPayoffTime - baselineScenario.summary.maxPayoffTime)} mo
                   </p>
                 )}
@@ -470,9 +607,11 @@ const ScenarioSimulations = () => {
                 <p className="text-2xl font-semibold text-gray-900">
                   ${currentScenario.summary.totalInterestSavings.toLocaleString()}
                 </p>
-                <p className={`text-sm ${
-                  currentScenario.summary.totalInterestSavings > 0 ? 'text-success-600' : 'text-gray-500'
-                }`}>
+                <p
+                  className={`text-sm ${
+                    currentScenario.summary.totalInterestSavings > 0 ? 'text-success-600' : 'text-gray-500'
+                  }`}
+                >
                   vs. current plan
                 </p>
               </div>
@@ -487,8 +626,8 @@ const ScenarioSimulations = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Scenario Comparison
           </h3>
-          <div className="h-64">
-            <ReactECharts option={comparisonChartOption} style={{ height: '100%', width: '100%' }} />
+          <div className="h-96">
+            <ReactECharts option={comparisonChartOption} style={{height: '100%', width: '100%'}} />
           </div>
         </Card>
 
@@ -496,8 +635,8 @@ const ScenarioSimulations = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Balance Timeline - {scenarioTypes.find(s => s.id === activeScenario)?.name}
           </h3>
-          <div className="h-64">
-            <ReactECharts option={timelineChartOption} style={{ height: '100%', width: '100%' }} />
+          <div className="h-96">
+            <ReactECharts option={timelineChartOption} style={{height: '100%', width: '100%'}} />
           </div>
         </Card>
       </div>

@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoanProvider } from './context/LoanContext';
+import { AlertProvider } from './context/AlertContext';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
+import LoginForm from './components/auth/LoginForm';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import LoanManagement from './pages/LoanManagement';
 import PaymentCalculator from './pages/PaymentCalculator';
@@ -11,10 +16,12 @@ import SavingsAnalysis from './pages/SavingsAnalysis';
 import AlertsReminders from './pages/AlertsReminders';
 import ScenarioSimulations from './pages/ScenarioSimulations';
 import Reports from './pages/Reports';
-import { LoanProvider } from './context/LoanContext';
-import { AlertProvider } from './context/AlertContext';
+import UserManagement from './pages/UserManagement';
+import UserProfile from './pages/UserProfile';
+import RolePermissions from './pages/RolePermissions';
 
-function App() {
+const AppContent = () => {
+  const { isAuthenticated, isLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
@@ -34,41 +41,97 @@ function App() {
     }
   }, [darkMode]);
 
+  const toggleDarkMode = () => {
+    setDarkMode(prev => !prev);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
+
   return (
-    <LoanProvider>
-      <AlertProvider>
-        <Router>
-          <div className={`min-h-screen bg-gray-50 ${darkMode ? 'dark' : ''}`}>
-            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            
-            <div className="lg:pl-64">
-              <Header 
-                onMenuClick={() => setSidebarOpen(true)}
-                darkMode={darkMode}
-                onDarkModeToggle={() => setDarkMode(!darkMode)}
-              />
-              
-              <main className="py-6">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                  <AnimatePresence mode="wait">
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/loans" element={<LoanManagement />} />
-                      <Route path="/calculator" element={<PaymentCalculator />} />
-                      <Route path="/optimization" element={<OptimizationStrategies />} />
-                      <Route path="/savings" element={<SavingsAnalysis />} />
-                      <Route path="/alerts" element={<AlertsReminders />} />
-                      <Route path="/scenarios" element={<ScenarioSimulations />} />
-                      <Route path="/reports" element={<Reports />} />
-                    </Routes>
-                  </AnimatePresence>
-                </div>
-              </main>
+    <div className={`min-h-screen ${darkMode ? 'dark' : ''} bg-gray-50 dark:bg-gray-900 flex overflow-hidden`}>
+      {/* Sidebar component - fixed on left side for desktop */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} darkMode={darkMode} />
+      
+      {/* Main content area - with proper padding to accommodate sidebar */}
+      <div className="flex-1 flex flex-col lg:ml-64">
+        <Header 
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
+          darkMode={darkMode} 
+          onDarkModeToggle={toggleDarkMode} 
+        />
+        <main className="flex-1 overflow-auto dark:bg-gray-900">
+          <div className="py-6">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <AnimatePresence mode="wait">
+                <Routes>
+                  <Route path="/" element={<ProtectedRoute requiredPermission="view_own_loans">
+                    <Dashboard />
+                  </ProtectedRoute>} />
+                  <Route path="/loans" element={<ProtectedRoute requiredPermission="view_own_loans">
+                    <LoanManagement />
+                  </ProtectedRoute>} />
+                  <Route path="/calculator" element={<ProtectedRoute requiredPermission="view_own_loans">
+                    <PaymentCalculator />
+                  </ProtectedRoute>} />
+                  <Route path="/optimization" element={<ProtectedRoute requiredPermission="view_own_loans">
+                    <OptimizationStrategies />
+                  </ProtectedRoute>} />
+                  <Route path="/savings" element={<ProtectedRoute requiredPermission="view_own_loans">
+                    <SavingsAnalysis />
+                  </ProtectedRoute>} />
+                  <Route path="/alerts" element={<ProtectedRoute requiredPermission="view_own_loans">
+                    <AlertsReminders />
+                  </ProtectedRoute>} />
+                  <Route path="/scenarios" element={<ProtectedRoute requiredPermission="view_own_loans">
+                    <ScenarioSimulations />
+                  </ProtectedRoute>} />
+                  <Route path="/reports" element={<ProtectedRoute requiredPermission="view_reports">
+                    <Reports />
+                  </ProtectedRoute>} />
+                  <Route path="/users" element={<ProtectedRoute requiredPermission="manage_users">
+                    <UserManagement />
+                  </ProtectedRoute>} />
+                  <Route path="/roles" element={<ProtectedRoute requiredPermission="manage_roles">
+                    <RolePermissions />
+                  </ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute requiredPermission="manage_own_profile">
+                    <UserProfile />
+                  </ProtectedRoute>} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </AnimatePresence>
             </div>
           </div>
-        </Router>
-      </AlertProvider>
-    </LoanProvider>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <LoanProvider>
+        <AlertProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </AlertProvider>
+      </LoanProvider>
+    </AuthProvider>
   );
 }
 

@@ -12,9 +12,58 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
 }
 
 #root {
   width: 100%;
-  height: 100%;
+  height: 100vh;
+}
+
+/* Make sure charts fit properly */
+.echarts-for-react {
+  height: 100% !important;
+}
+
+/* Fix scrolling in main content */
+main {
+  overflow-y: auto;
+  height: calc(100vh - 64px); /* Subtract header height */
+}
+
+/* Ensure sidebar is always visible on large screens */
+@media (min-width: 1024px) {
+  .lg\:fixed {
+    position: fixed;
+  }
+}
+
+/* Dark mode styles */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+/* Apply dark mode to form elements */
+.dark input, 
+.dark select, 
+.dark textarea {
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #f3f4f6;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #3b82f6;
+}
+
+/* Fix chart colors in dark mode */
+.dark .echarts-for-react canvas {
+  filter: brightness(0.9);
 }

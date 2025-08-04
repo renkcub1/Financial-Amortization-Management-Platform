@@ -1,38 +1,37 @@
-import React, { useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useLoan } from '../context/LoanContext';
-import { useAlert } from '../context/AlertContext';
+import React,{useEffect} from 'react';
+import {motion} from 'framer-motion';
+import {useLoan} from '../context/LoanContext';
+import {useAlert} from '../context/AlertContext';
 import Card from '../components/ui/Card';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import ReactECharts from 'echarts-for-react';
 
-const { FiDollarSign, FiTrendingUp, FiTrendingDown, FiCreditCard, FiCalendar, FiAlertTriangle } = FiIcons;
+const {FiDollarSign,FiTrendingUp,FiTrendingDown,FiCreditCard,FiCalendar,FiAlertTriangle}=FiIcons;
 
-const Dashboard = () => {
-  const { loans, getTotalDebt, getTotalMonthlyPayments } = useLoan();
-  const { alerts, generatePaymentAlerts, addAlert } = useAlert();
+const Dashboard=()=> {
+  const {loans,getTotalDebt,getTotalMonthlyPayments}=useLoan();
+  const {alerts,generatePaymentAlerts,addAlert}=useAlert();
 
-  useEffect(() => {
-    const paymentAlerts = generatePaymentAlerts(loans);
-    paymentAlerts.forEach(alert => addAlert(alert));
-  }, [loans]);
+  useEffect(()=> {
+    const paymentAlerts=generatePaymentAlerts(loans);
+    paymentAlerts.forEach(alert=> addAlert(alert));
+  },[loans]);
 
-  const totalDebt = getTotalDebt();
-  const totalMonthlyPayments = getTotalMonthlyPayments();
-  const activeLoans = loans.filter(loan => loan.isActive).length;
-  
-  const averageInterestRate = loans.length > 0 
-    ? loans.reduce((sum, loan) => sum + loan.interestRate, 0) / loans.length 
+  const totalDebt=getTotalDebt();
+  const totalMonthlyPayments=getTotalMonthlyPayments();
+  const activeLoans=loans.filter(loan=> loan.isActive).length;
+  const averageInterestRate=loans.length > 0 
+    ? loans.reduce((sum,loan)=> sum + loan.interestRate,0) / loans.length 
     : 0;
 
-  const debtByTypeData = loans.reduce((acc, loan) => {
-    const type = loan.type.replace('_', ' ').toUpperCase();
-    acc[type] = (acc[type] || 0) + loan.balance;
+  const debtByTypeData=loans.reduce((acc,loan)=> {
+    const type=loan.type.replace('_',' ').toUpperCase();
+    acc[type]=(acc[type] || 0) + loan.balance;
     return acc;
-  }, {});
+  },{});
 
-  const pieChartOption = {
+  const pieChartOption={
     tooltip: {
       trigger: 'item',
       formatter: '{a} <br/>{b}: ${c:,.0f} ({d}%)'
@@ -41,7 +40,7 @@ const Dashboard = () => {
       {
         name: 'Debt Distribution',
         type: 'pie',
-        radius: ['40%', '70%'],
+        radius: ['40%','70%'],
         avoidLabelOverlap: false,
         itemStyle: {
           borderRadius: 10,
@@ -62,31 +61,36 @@ const Dashboard = () => {
         labelLine: {
           show: false
         },
-        data: Object.entries(debtByTypeData).map(([type, amount]) => ({
+        data: Object.entries(debtByTypeData).map(([type,amount])=> ({
           value: amount,
           name: type,
         }))
       }
     ],
-    color: ['#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6']
+    color: ['#0ea5e9','#22c55e','#f59e0b','#ef4444','#8b5cf6']
   };
 
-  const paymentTrendData = loans.map((loan, index) => ({
+  const paymentTrendData=loans.map((loan,index)=> ({
     name: loan.name,
     value: loan.monthlyPayment,
     itemStyle: {
-      color: ['#0ea5e9', '#22c55e', '#f59e0b', '#ef4444'][index % 4]
+      color: ['#0ea5e9','#22c55e','#f59e0b','#ef4444'][index % 4]
     }
   }));
 
-  const barChartOption = {
+  const barChartOption={
     tooltip: {
       trigger: 'axis',
-      formatter: '{b}: ${c:,.0f}'
+      formatter: function(params) {
+        return `${params[0].name}: $${params[0].value.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}`;
+      }
     },
     xAxis: {
       type: 'category',
-      data: loans.map(loan => loan.name),
+      data: loans.map(loan=> loan.name),
       axisLabel: {
         rotate: 45,
         interval: 0
@@ -95,7 +99,12 @@ const Dashboard = () => {
     yAxis: {
       type: 'value',
       axisLabel: {
-        formatter: '${value:,.0f}'
+        formatter: function(value) {
+          return '$' + value.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+          });
+        }
       }
     },
     series: [
@@ -104,7 +113,7 @@ const Dashboard = () => {
         type: 'bar',
         data: paymentTrendData,
         itemStyle: {
-          borderRadius: [4, 4, 0, 0]
+          borderRadius: [4,4,0,0]
         }
       }
     ],
@@ -116,7 +125,7 @@ const Dashboard = () => {
     }
   };
 
-  const stats = [
+  const stats=[
     {
       name: 'Total Debt',
       value: `$${totalDebt.toLocaleString()}`,
@@ -155,18 +164,18 @@ const Dashboard = () => {
     }
   ];
 
-  const upcomingPayments = loans
-    .filter(loan => loan.isActive)
-    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-    .slice(0, 5);
+  const upcomingPayments=loans
+    .filter(loan=> loan.isActive)
+    .sort((a,b)=> new Date(a.dueDate) - new Date(b.dueDate))
+    .slice(0,5);
 
-  const recentAlerts = alerts.slice(0, 3);
+  const recentAlerts=alerts.slice(0,3);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      initial={{opacity: 0,y: 20}}
+      animate={{opacity: 1,y: 0}}
+      transition={{duration: 0.5}}
       className="space-y-6"
     >
       <div className="md:flex md:items-center md:justify-between">
@@ -182,12 +191,12 @@ const Dashboard = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
+        {stats.map((stat,index)=> (
           <motion.div
             key={stat.name}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
+            initial={{opacity: 0,y: 20}}
+            animate={{opacity: 1,y: 0}}
+            transition={{duration: 0.5,delay: index * 0.1}}
           >
             <Card className="relative overflow-hidden">
               <div className="flex items-center">
@@ -205,12 +214,12 @@ const Dashboard = () => {
                       <div className="text-2xl font-semibold text-gray-900">
                         {stat.value}
                       </div>
-                      {stat.change !== '0' && (
+                      {stat.change !=='0' && (
                         <div className={`ml-2 flex items-baseline text-sm font-semibold ${
-                          stat.changeType === 'increase' ? 'text-success-600' : 'text-danger-600'
+                          stat.changeType==='increase' ? 'text-success-600' : 'text-danger-600'
                         }`}>
                           <SafeIcon 
-                            icon={stat.changeType === 'increase' ? FiTrendingUp : FiTrendingDown} 
+                            icon={stat.changeType==='increase' ? FiTrendingUp : FiTrendingDown} 
                             className="h-4 w-4 mr-1" 
                           />
                           {stat.change}
@@ -232,7 +241,10 @@ const Dashboard = () => {
             Debt Distribution by Type
           </h3>
           <div className="h-64">
-            <ReactECharts option={pieChartOption} style={{ height: '100%', width: '100%' }} />
+            <ReactECharts 
+              option={pieChartOption} 
+              style={{height: '100%',width: '100%'}} 
+            />
           </div>
         </Card>
 
@@ -241,7 +253,10 @@ const Dashboard = () => {
             Monthly Payments by Loan
           </h3>
           <div className="h-64">
-            <ReactECharts option={barChartOption} style={{ height: '100%', width: '100%' }} />
+            <ReactECharts 
+              option={barChartOption} 
+              style={{height: '100%',width: '100%'}} 
+            />
           </div>
         </Card>
       </div>
@@ -257,7 +272,7 @@ const Dashboard = () => {
             <SafeIcon icon={FiCalendar} className="h-5 w-5 text-gray-400" />
           </div>
           <div className="space-y-3">
-            {upcomingPayments.map((loan) => (
+            {upcomingPayments.map((loan)=> (
               <div key={loan.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
                   <p className="font-medium text-gray-900">{loan.name}</p>
@@ -265,7 +280,7 @@ const Dashboard = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-gray-900">${loan.monthlyPayment.toLocaleString()}</p>
-                  <p className="text-sm text-gray-500">{loan.type.replace('_', ' ')}</p>
+                  <p className="text-sm text-gray-500">{loan.type.replace('_',' ')}</p>
                 </div>
               </div>
             ))}
@@ -282,12 +297,17 @@ const Dashboard = () => {
           </div>
           <div className="space-y-3">
             {recentAlerts.length > 0 ? (
-              recentAlerts.map((alert) => (
-                <div key={alert.id} className={`p-3 rounded-lg border-l-4 ${
-                  alert.severity === 'high' ? 'border-danger-500 bg-danger-50' :
-                  alert.severity === 'medium' ? 'border-warning-500 bg-warning-50' :
-                  'border-primary-500 bg-primary-50'
-                }`}>
+              recentAlerts.map((alert)=> (
+                <div
+                  key={alert.id}
+                  className={`p-3 rounded-lg border-l-4 ${
+                    alert.severity==='high' 
+                      ? 'border-danger-500 bg-danger-50' 
+                      : alert.severity==='medium' 
+                        ? 'border-warning-500 bg-warning-50' 
+                        : 'border-primary-500 bg-primary-50'
+                  }`}
+                >
                   <p className="font-medium text-gray-900">{alert.title}</p>
                   <p className="text-sm text-gray-600">{alert.message}</p>
                 </div>

@@ -1,5 +1,5 @@
 {
-  "name": "financial-amortization-manager",
+  "name": "kpcs-financial-management",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "npm run lint && vite build",
     "lint": "eslint .",
-    "lint:error": "eslint . --quiet", 
+    "lint:error": "eslint . --quiet",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -23,7 +23,8 @@
     "date-fns": "4.1.0",
     "jspdf": "^2.5.1",
     "html2canvas": "^1.4.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "file-saver": "^2.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
